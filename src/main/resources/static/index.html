@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Authentication</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f5f5f7;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            color: #1d1d1f;
+            padding: 20px;
+        }
+
+        .form-container {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            padding: 48px 40px;
+            border-radius: 20px;
+            box-shadow:
+                0 4px 24px rgba(0, 0, 0, 0.04),
+                0 1px 2px rgba(0, 0, 0, 0.02);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 420px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .form-container:hover {
+            transform: translateY(-2px);
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.06),
+                0 2px 8px rgba(0, 0, 0, 0.03);
+        }
+
+        .form-container h2 {
+            margin-bottom: 36px;
+            font-weight: 600;
+            font-size: 28px;
+            color: #1d1d1f;
+            letter-spacing: -0.022em;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+            width: 100%;
+        }
+
+        .form-group label {
+            font-size: 15px;
+            font-weight: 500;
+            color: #86868b;
+            margin-bottom: 8px;
+            display: block;
+            letter-spacing: -0.01em;
+        }
+
+        .form-group input[type="text"] {
+            padding: 15px 16px;
+            border: 1px solid #d2d2d7;
+            border-radius: 12px;
+            width: 100%;
+            font-size: 17px;
+            font-weight: 400;
+            font-family: inherit;
+            outline: none;
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            background: rgba(255, 255, 255, 0.8);
+            color: #1d1d1f;
+        }
+
+        .form-group input[type="text"]:focus {
+            border-color: #0071e3;
+            box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+            background: #ffffff;
+        }
+
+        .form-group input[type="text"]:hover:not(:focus) {
+            border-color: #a1a1a6;
+        }
+
+        .form-group input[type="text"]::placeholder {
+            color: #86868b;
+            opacity: 0.7;
+        }
+
+        .captcha-container {
+            margin: 28px 0;
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .cf-turnstile {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        #sendBtn {
+            padding: 14px;
+            background-color: #0071e3;
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            margin-top: 8px;
+            width: 100%;
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            letter-spacing: -0.01em;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #sendBtn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        #sendBtn:hover:not(:disabled)::after {
+            opacity: 1;
+        }
+
+        #sendBtn:active:not(:disabled) {
+            transform: scale(0.98);
+            background-color: #0062cc;
+        }
+
+        #sendBtn:disabled {
+            background-color: #e8e8ed;
+            color: #a1a1a6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        *:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(0, 125, 250, 0.6);
+            border-radius: 8px;
+        }
+
+        @media (max-width: 480px) {
+            .form-container {
+                padding: 32px 24px;
+            }
+
+            .form-container h2 {
+                font-size: 24px;
+                margin-bottom: 28px;
+            }
+
+            body {
+                background-color: #ffffff;
+            }
+
+            .form-container {
+                box-shadow: none;
+                background: #ffffff;
+            }
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        .loading #sendBtn span {
+            display: none;
+        }
+
+        .loading #sendBtn::before {
+            content: '';
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+            position: absolute;
+            top: calc(50% - 10px);
+            left: calc(50% - 10px);
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #1c1c1e;
+                color: #f5f5f7;
+            }
+
+            .form-container {
+                background: rgba(28, 28, 30, 0.85);
+                box-shadow:
+                    0 4px 24px rgba(0, 0, 0, 0.2),
+                    0 1px 2px rgba(0, 0, 0, 0.1);
+            }
+
+            .form-container:hover {
+                box-shadow:
+                    0 8px 32px rgba(0, 0, 0, 0.25),
+                    0 2px 8px rgba(0, 0, 0, 0.15);
+            }
+
+            .form-container h2 {
+                color: #f5f5f7;
+            }
+
+            .form-group label {
+                color: #98989d;
+            }
+
+            .form-group input[type="text"] {
+                background: rgba(44, 44, 46, 0.8);
+                color: #f5f5f7;
+                border-color: #3a3a3c;
+            }
+
+            .form-group input[type="text"]:focus {
+                border-color: #0a84ff;
+                box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.15);
+                background: #2c2c2e;
+            }
+
+            .form-group input[type="text"]:hover:not(:focus) {
+                border-color: #6e6e73;
+            }
+
+            .form-group input[type="text"]::placeholder {
+                color: #98989d;
+            }
+
+            #sendBtn {
+                background-color: #0a84ff;
+            }
+
+            #sendBtn:active:not(:disabled) {
+                background-color: #0071e3;
+            }
+
+            #sendBtn:disabled {
+                background-color: #3a3a3c;
+                color: #8e8e93;
+            }
+
+            .cf-turnstile {
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            }
+
+            *:focus-visible {
+                box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.4);
+            }
+
+            @media (max-width: 480px) {
+                body {
+                    background-color: #1c1c1e;
+                }
+
+                .form-container {
+                    background: #1c1c1e;
+                }
+            }
+        }
+
+        .spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 24px;
+            height: 24px;
+            margin: -12px 0 0 -12px;
+            border-radius: 50%;
+            border: 2.5px solid rgba(255,255,255,0.3);
+            border-top: 2.5px solid #fff;
+            animation: apple-spin 0.8s linear infinite;
+            z-index: 2;
+        }
+
+        @keyframes apple-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .form-container.loading #sendBtn span {
+            visibility: hidden;
+        }
+
+        .form-container.loading #sendBtn .spinner {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+<form class="form-container" id="authenticationForm" method="POST" action="/">
+    <h2>Authentication</h2>
+    <div class="form-group">
+        <label for="token">Authentication Token</label>
+        <input type="text" id="token" name="token" required autocomplete="off" placeholder="Enter your verification token" />
+    </div>
+    <div class="captcha-container">
+        <div class="cf-turnstile"
+             data-sitekey="0x4AAAAAAB1wlqi2075CF2z_"
+             data-callback="onTurnstileSuccess"
+             data-expired-callback="onTurnstileExpired"
+             data-theme="auto"></div>
+    </div>
+    <button type="submit" id="sendBtn" disabled><span>Continue</span></button>
+</form>
+
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<script>
+    function onTurnstileSuccess() {
+        document.getElementById('sendBtn').disabled = false;
+    }
+
+    function onTurnstileExpired() {
+        document.getElementById('sendBtn').disabled = true;
+    }
+
+    window.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('authenticationForm');
+        const sendBtn = document.getElementById('sendBtn');
+        const tokenInput = document.getElementById('token');
+        const urlParams = new URL(window.location.href).searchParams;
+        const token = urlParams.get('token');
+
+        if (token) {
+            tokenInput.value = token;
+        }
+
+        form.addEventListener('submit', function(e) {
+            if (sendBtn.disabled) {
+                e.preventDefault();
+                return;
+            }
+
+            form.classList.add('loading');
+            sendBtn.disabled = true;
+        });
+
+        tokenInput.addEventListener('focus', function() {
+            this.style.transform = 'scale(1.01)';
+            this.style.transition = 'all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)';
+        });
+
+        tokenInput.addEventListener('blur', function() {
+            this.style.transform = 'scale(1)';
+        });
+
+        tokenInput.addEventListener('input', function() {
+            if (this.value.length > 0) {
+                this.style.borderColor = '#34c759';
+            } else {
+                this.style.borderColor = '';
+            }
+        });
+    });
+</script>
+</body>
+</html>
